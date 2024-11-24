@@ -6,16 +6,18 @@ on:
 jobs:
   unit_testing:
     runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:latest
+        ports:
+          - 6379:6379
     strategy:
       matrix:
         python-version: ["3.12"]
 
     steps:
       - uses: actions/checkout@v3
-        with:
-            fetch-depth: 0
-            submodules: recursive
-            token: ${{ secrets.GH_API_TOKEN }}
+        name: Check out code
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
@@ -28,12 +30,14 @@ jobs:
       - name: Install dependencies using Poetry
         run: |
           poetry install
+        working-directory: ./
       - name: Test with pytest
         run: |
-          coverage run --source=tests -m pytest -v --disable-warnings -W ignore::DeprecationWarning tests/
+          poetry run coverage run --source=tests -m pytest -v --disable-warnings -W ignore::DeprecationWarning tests/
+        working-directory: ./
       - name: Generate Coverage Report
         run: |
-          coverage xml
+          poetry run coverage xml
       - name: Pytest coverage comment
         uses: MishaKav/pytest-coverage-comment@main
         with:
@@ -47,3 +51,5 @@ jobs:
           report-only-changed-files: false
           remove-link-from-badge: false
           unique-id-for-comment: python3.12
+
+
