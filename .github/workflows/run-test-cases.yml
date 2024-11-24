@@ -25,6 +25,7 @@ jobs:
       - name: Install dependencies using Poetry
         run: |
           poetry install
+        working-directory: ./
       - name: Test with pytest
         run: |
           coverage run --source=tests -m pytest -v --disable-warnings -W ignore::DeprecationWarning tests/
