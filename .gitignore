@@ -246,6 +246,9 @@ venv.bak/
 # mkdocs documentation
 /site
 
+/.pytest_cache
+/.ruff_cache
+
 # mypy
 .mypy_cache/
 .dmypy.json
