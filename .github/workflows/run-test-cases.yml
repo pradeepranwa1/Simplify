@@ -28,11 +28,11 @@ jobs:
         working-directory: ./
       - name: Test with pytest
         run: |
-          coverage run --source=tests -m pytest -v --disable-warnings -W ignore::DeprecationWarning tests/
+          poetry run coverage run --source=tests -m pytest -v --disable-warnings -W ignore::DeprecationWarning tests/
         working-directory: ./
       - name: Generate Coverage Report
         run: |
-          coverage xml
+          poetry run coverage xml
       - name: Pytest coverage comment
         uses: MishaKav/pytest-coverage-comment@main
         with:
