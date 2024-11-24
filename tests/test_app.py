@@ -246,6 +246,7 @@ async def test_get_projects_order_desc(login_token):
 
 Similarly we can add test case for get_project for other query params and failed cases, 
 
+
 Plus same set of test cases for get_candidates
 
 
