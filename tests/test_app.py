@@ -1,6 +1,5 @@
 import pytest
 from httpx import AsyncClient, ASGITransport
-import pytest
 
 from takehome.repository.database import Base, engine
 from takehome.app import app
@@ -42,7 +41,7 @@ async def test_create_project(login_token):
 
 @pytest.mark.asyncio
 async def test_create_project_login_failed():
-    headers = {"Authorization": f"Bearer something"}
+    headers = {"Authorization": "Bearer something"}
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         response = await ac.post("/project/", json=project_object1, headers=headers)
     assert response.status_code == 401
