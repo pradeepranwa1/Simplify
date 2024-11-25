@@ -7,41 +7,92 @@ import json
 from concurrent.futures import ThreadPoolExecutor
 
 from takehome.repository.database_models import CandidateDB, ProjectDB
-from takehome.models import FormTeamCandidateResponse, FormTeamResponse, FormTeamScore
+from takehome.models import FormTeamCandidateResponse, FormTeamResponse, FormTeamScore, CandidateDictSkills
 from takehome.config import settings
 from takehome.cache import redis_client
 from takehome.constants import SPECIAL_SCORE_REDIS_KEY
 from takehome.logs import LoggingContext, LOGGER
 
-def calculate_team_coverage(team: List[CandidateDB], required_skills: dict):
+#calculate coverage, expertise and assigned skills for a given set of candidates with respect to required_skills
+def calculate_team_coverage(team: List[CandidateDictSkills], required_skills: dict):
     skills_covered = {}
     total_expertise = 0
 
     skill_match = {candidate.id: [] for candidate in team}
 
     for candidate in team:
-        candidate_skills = {skill['name']: skill['expertise_level'] for skill in candidate.skills}
-        for skill in candidate_skills.keys():
-            expertise = candidate_skills[skill]
-            if skill in required_skills.keys() and expertise >= required_skills[skill]:
-                if skill not in skills_covered or expertise > skills_covered[skill]:
-                    skills_covered[skill] = expertise
-                    skill_match[candidate.id].append(skill)
+        candidate_skills = candidate.skills
+        for skill_name in candidate_skills.keys():
+            expertise = candidate_skills[skill_name]
+            if skill_name in required_skills.keys() and expertise >= required_skills[skill_name]:
+                if skill_name not in skills_covered or expertise > skills_covered[skill_name]:
+                    skills_covered[skill_name] = expertise
+                    skill_match[candidate.id].append(skill_name)
     
     total_expertise = sum(skills_covered.values())
     coverage = len(skills_covered.keys()) / len(required_skills.keys())
     return coverage, total_expertise, skill_match 
 
+#remove candidates which contribute zero in project and remove skills which are not required in project
+def filter_candidates_and_skills(required_skills, candidates: List[CandidateDB]) -> List[CandidateDictSkills]:
+
+    filtered_candidates = []
+    for candidate in candidates:
+        is_any_useful_skill = False
+        candidate_skills = {skill.name: skill.expertise_level for skill in candidate.skills}
+        candidate_skill_keys = list(candidate_skills.keys())
+        for skill_name in candidate_skill_keys:
+            if skill_name not in required_skills.keys():
+                candidate_skills.pop(skill_name)
+            elif required_skills[skill_name] > candidate_skills[skill_name]:
+                candidate_skills.pop(skill_name)
+            else:
+                is_any_useful_skill = True
+        if is_any_useful_skill:
+            tmp_candidate = CandidateDictSkills(id=candidate.id, name=candidate.name, skills=candidate_skills)
+            filtered_candidates.append(tmp_candidate)
+    return filtered_candidates
+
+#remove candidates for which there exist a candidate who have better expertise for all skills
+def filter_better_candidates(candidates: List[CandidateDictSkills]) -> List[CandidateDictSkills]:
+
+    remove_candidates_indexes = []
+    for i in range(len(candidates)):
+        for j in range(len(candidates)):
+            if i==j:
+                continue
+
+            is_j_better=True
+            i_skills = candidates[i].skills
+            j_skills = candidates[j].skills
+            for skill_name in i_skills.keys():
+                if (skill_name not in j_skills.keys() ) or (j_skills[skill_name] < i_skills[skill_name] ):
+                    is_j_better = False 
+                
+            if is_j_better:
+                remove_candidates_indexes.append(i)
+    filtered_candidates = []
+    for i in range(len(candidates)):
+        if i not in remove_candidates_indexes:
+            filtered_candidates.append(candidates[i])
+    return filtered_candidates
+
+
 def form_team_helper(team_size: int, candidates: List[CandidateDB], project: ProjectDB, local_logging_context: LoggingContext) -> FormTeamResponse:
 
-    best_team = None
+    best_team = None  # List[CandidateDictSkills]
     best_coverage = 0
     best_expertise = 0
     best_skill_match = {}
 
-    required_skills = { skill['name']: skill['expertise_level']  for skill in project.skills}
+    required_skills = { skill.name: skill.expertise_level  for skill in project.skills}
 
-    for team in combinations(candidates, team_size):
+    filtered_candidates: List[CandidateDictSkills] = filter_candidates_and_skills(required_skills, candidates)
+    filtered_candidates: List[CandidateDictSkills] = filter_better_candidates(filtered_candidates)
+
+    #remove candidates and there skills
+
+    for team in combinations(filtered_candidates, team_size):
         coverage, expertise, skill_match = calculate_team_coverage(team, required_skills)
 
         if (coverage > best_coverage) or (coverage == best_coverage and expertise > best_expertise):
@@ -67,9 +118,9 @@ def form_team_helper(team_size: int, candidates: List[CandidateDB], project: Pro
 
         cur_special_score = {'candidate_id': str(candidate.id)}
         cur_special_score['skills']=[]
-        for skill in candidate.skills:
-            if skill['name'] in assigned_skills:
-                cur_special_score['skills'].append({'skill': skill['name'], 'score': skill['expertise_level']})
+        for skill_name in candidate.skills:
+            if skill_name in assigned_skills:
+                cur_special_score['skills'].append({'skill': skill_name, 'score': candidate.skills[skill_name]})
         special_score_payload.append(cur_special_score)
     LOGGER.info("Created a optimal team", extra=local_logging_context.store)
     
