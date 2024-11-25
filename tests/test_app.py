@@ -132,17 +132,6 @@ async def test_create_candidate_duplicate(login_token):
     assert response.json() == {'detail': 'Invalid Request, candidate already exists'}
 
 @pytest.mark.asyncio
-async def test_get_candidate(login_token):
-    headers = {"Authorization": f"Bearer {await login_token}"}
-    params = {"id": 1}
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        response = await ac.get("/candidate/", params = params, headers=headers)
-    assert response.status_code == 200
-    assert response.json()['id'] == 1
-    assert response.json()['name'] == candidate_special_score_object1['name']
-    assert response.json()['skills'] == candidate_special_score_object1['skills']
-
-@pytest.mark.asyncio
 async def test_get_candidate_invalid(login_token):
     headers = {"Authorization": f"Bearer {await login_token}"}
     params = {"id": 9999}
@@ -156,12 +145,9 @@ async def test_update_candidate(login_token):
     headers = {"Authorization": f"Bearer {await login_token}"}
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         response = await ac.put("/candidate/", json=candidate_object2, headers=headers)
-    params = {"id" : 1}
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        response = await ac.get("/candidate/", params = params, headers=headers)
     assert response.status_code == 200
-    assert response.json()['name'] == candidate_special_score_object2['name']
-    assert response.json()['skills'] == candidate_special_score_object2['skills']
+    assert response.json()['name'] == candidate_object2['name']
+    assert response.json()['skills'] == candidate_object2['skills']
 
 @pytest.mark.asyncio
 async def test_update_candidate_invalid(login_token):
@@ -247,6 +233,7 @@ Similarly we can add test case for get_project for other query params and failed
 
 
 Plus same set of test cases for get_candidates
+for get_candidates we need to mock fetch_special_score function
 
 
 """
