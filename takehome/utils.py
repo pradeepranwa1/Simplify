@@ -78,7 +78,7 @@ def filter_better_candidates(candidates: List[CandidateDictSkills]) -> List[Cand
     return filtered_candidates
 
 
-def form_team_helper(team_size: int, candidates: List[CandidateDB], project: ProjectDB, local_logging_context: LoggingContext) -> FormTeamResponse:
+def form_team_helper(team_size: int, candidates_db: List[CandidateDB], project: ProjectDB, local_logging_context: LoggingContext) -> FormTeamResponse:
 
     best_team = None  # List[CandidateDictSkills]
     best_coverage = 0
@@ -88,7 +88,7 @@ def form_team_helper(team_size: int, candidates: List[CandidateDB], project: Pro
     required_skills = { skill.name: skill.expertise_level  for skill in project.skills}
 
     #filtering candidates
-    filtered_candidates: List[CandidateDictSkills] = filter_candidates_and_skills(required_skills, candidates)
+    filtered_candidates: List[CandidateDictSkills] = filter_candidates_and_skills(required_skills, candidates_db)
     filtered_candidates: List[CandidateDictSkills] = filter_better_candidates(filtered_candidates)
 
     for team in combinations(filtered_candidates, team_size):
@@ -115,20 +115,24 @@ def form_team_helper(team_size: int, candidates: List[CandidateDB], project: Pro
                             assigned_skills=assigned_skills, special_score=[])
         candidate_response.append(tmp_response)
 
-        cur_special_score = {'candidate_id': str(candidate.id)}
-        cur_special_score['skills']=[]
-        for skill_name in candidate.skills:
-            if skill_name in assigned_skills:
-                cur_special_score['skills'].append({'skill': skill_name, 'score': candidate.skills[skill_name]})
-        special_score_payload.append(cur_special_score)
+        cur_special_score_payload = {'candidate_id': str(candidate.id)}
+        cur_special_score_payload['skills']=[]
+        candidate_db=None
+        for tmp_candidate in candidates_db:
+            if tmp_candidate.id == candidate.id:
+                candidate_db = tmp_candidate
+        for skill in candidate_db.skills:
+            cur_special_score_payload['skills'].append({'skill': skill.name, 'score': skill.expertise_level})
+        special_score_payload.append(cur_special_score_payload)
     LOGGER.info("Created a optimal team", extra=local_logging_context.store)
     
     LOGGER.info(f"Fetching special scores for payload {special_score_payload}", extra=local_logging_context.store)
     special_scores = fetch_parallel_scores(special_score_payload)
     for candidate in candidate_response:
         special_score = special_scores[str(candidate.candidate_id)]
-        for skill in special_score.keys():
-            candidate.special_score.append(FormTeamScore(skill=skill, score=special_score[skill]))
+        for skill_name in special_score.keys():
+            if skill_name in candidate.assigned_skills:
+                candidate.special_score.append(FormTeamScore(skill=skill_name, score=special_score[skill_name]))
 
     response = FormTeamResponse(team=candidate_response, coverage=best_coverage, total_expertise=best_expertise)
     return response
