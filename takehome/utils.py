@@ -87,10 +87,9 @@ def form_team_helper(team_size: int, candidates: List[CandidateDB], project: Pro
 
     required_skills = { skill.name: skill.expertise_level  for skill in project.skills}
 
+    #filtering candidates
     filtered_candidates: List[CandidateDictSkills] = filter_candidates_and_skills(required_skills, candidates)
     filtered_candidates: List[CandidateDictSkills] = filter_better_candidates(filtered_candidates)
-
-    #remove candidates and there skills
 
     for team in combinations(filtered_candidates, team_size):
         coverage, expertise, skill_match = calculate_team_coverage(team, required_skills)
@@ -134,6 +133,7 @@ def form_team_helper(team_size: int, candidates: List[CandidateDB], project: Pro
     response = FormTeamResponse(team=candidate_response, coverage=best_coverage, total_expertise=best_expertise)
     return response
 
+#using ThreadPoolExecutor to call multiple calls at once
 def fetch_parallel_scores(payloads: List[dict]) -> List[dict]:
     with ThreadPoolExecutor() as executor:
         results = list(executor.map(fetch_special_score, payloads))
@@ -141,6 +141,7 @@ def fetch_parallel_scores(payloads: List[dict]) -> List[dict]:
     candidate_ids = [payload['candidate_id'] for payload in payloads]
     return dict(zip(candidate_ids, results))
 
+#calls mock server api to fetch special score and store in redis
 def fetch_special_score( payload: dict) -> float:
     LOGGER.debug(f"fetching special score for payload {payload}")
     
