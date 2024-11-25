@@ -3,8 +3,8 @@ from httpx import AsyncClient, ASGITransport
 
 from takehome.repository.database import Base, engine
 from takehome.app import app
-from tests.test_helper import project_object1, project_object2, candidate_object1, candidate_special_score_object1
-from tests.test_helper import candidate_object2, candidate_special_score_object2
+from tests.test_helper import project_object1, project_object2, candidate_object1
+from tests.test_helper import candidate_object2
 
 
 # ficture to clear db
