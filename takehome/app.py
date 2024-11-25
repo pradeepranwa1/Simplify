@@ -45,6 +45,7 @@ templates = Jinja2Templates(directory=Path(BASE_DIR, "templates"))
 @app.on_event("startup")
 def startup_event():
     LOGGER.info("On startup_event")
+    redis_client.flushdb()
     Base.metadata.create_all(bind=engine)
 
 
