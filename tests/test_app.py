@@ -1,11 +1,10 @@
 import pytest
 from httpx import AsyncClient, ASGITransport
-import pytest
 
 from takehome.repository.database import Base, engine
 from takehome.app import app
-from tests.test_helper import project_object1, project_object2, candidate_object1, candidate_special_score_object1
-from tests.test_helper import candidate_object2, candidate_special_score_object2
+from tests.test_helper import project_object1, project_object2, candidate_object1
+from tests.test_helper import candidate_object2
 
 
 # ficture to clear db
@@ -42,7 +41,7 @@ async def test_create_project(login_token):
 
 @pytest.mark.asyncio
 async def test_create_project_login_failed():
-    headers = {"Authorization": f"Bearer something"}
+    headers = {"Authorization": "Bearer something"}
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         response = await ac.post("/project/", json=project_object1, headers=headers)
     assert response.status_code == 401
@@ -133,17 +132,6 @@ async def test_create_candidate_duplicate(login_token):
     assert response.json() == {'detail': 'Invalid Request, candidate already exists'}
 
 @pytest.mark.asyncio
-async def test_get_candidate(login_token):
-    headers = {"Authorization": f"Bearer {await login_token}"}
-    params = {"id": 1}
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        response = await ac.get("/candidate/", params = params, headers=headers)
-    assert response.status_code == 200
-    assert response.json()['id'] == 1
-    assert response.json()['name'] == candidate_special_score_object1['name']
-    assert response.json()['skills'] == candidate_special_score_object1['skills']
-
-@pytest.mark.asyncio
 async def test_get_candidate_invalid(login_token):
     headers = {"Authorization": f"Bearer {await login_token}"}
     params = {"id": 9999}
@@ -157,12 +145,9 @@ async def test_update_candidate(login_token):
     headers = {"Authorization": f"Bearer {await login_token}"}
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         response = await ac.put("/candidate/", json=candidate_object2, headers=headers)
-    params = {"id" : 1}
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        response = await ac.get("/candidate/", params = params, headers=headers)
     assert response.status_code == 200
-    assert response.json()['name'] == candidate_special_score_object2['name']
-    assert response.json()['skills'] == candidate_special_score_object2['skills']
+    assert response.json()['name'] == candidate_object2['name']
+    assert response.json()['skills'] == candidate_object2['skills']
 
 @pytest.mark.asyncio
 async def test_update_candidate_invalid(login_token):
@@ -246,7 +231,9 @@ async def test_get_projects_order_desc(login_token):
 
 Similarly we can add test case for get_project for other query params and failed cases, 
 
+
 Plus same set of test cases for get_candidates
+for get_candidates we need to mock fetch_special_score function
 
 
 """

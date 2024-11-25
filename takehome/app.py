@@ -45,6 +45,7 @@ templates = Jinja2Templates(directory=Path(BASE_DIR, "templates"))
 @app.on_event("startup")
 def startup_event():
     LOGGER.info("On startup_event")
+    redis_client.flushdb()
     Base.metadata.create_all(bind=engine)
 
 
@@ -73,11 +74,11 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
 @app.get("/project/", response_model=Project)
 def get_project(id: int, user=Depends(get_current_user)):
     local_logging_context: LoggingContext = LoggingContext(source="get_project", project_id=id)
-    LOGGER.info(f"Request received", extra=local_logging_context.store)
+    LOGGER.info("Request received", extra=local_logging_context.store)
     
     project_db = get_project_by_id(id)
     if not project_db:
-        LOGGER.warn(f"Invalid Request, Project with provided id does not exists", extra=local_logging_context.store)
+        LOGGER.warn("Invalid Request, Project with provided id does not exists", extra=local_logging_context.store)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid Request, Project with provided id does not exists",
@@ -89,7 +90,7 @@ def get_project(id: int, user=Depends(get_current_user)):
         skill_response.append(skill_tmp)
 
     project_response = Project(id=project_db.id, title=project_db.title, skills=skill_response)
-    LOGGER.debug(f"Request successfully completed ", extra=local_logging_context.store)
+    LOGGER.debug("Request successfully completed ", extra=local_logging_context.store)
     return project_response
 
 @app.post("/project/", response_model=Project)
@@ -102,9 +103,9 @@ def create_project(project: ProjectCreateRequest, user=Depends(get_current_user)
 @app.delete("/project/")
 def delete_project(id: int, user=Depends(get_current_user)):
     local_logging_context: LoggingContext = LoggingContext(source="delete_project", project_id=id)
-    LOGGER.debug(f"Request received", extra=local_logging_context.store)
+    LOGGER.debug("Request received", extra=local_logging_context.store)
     delete_project_db(id)
-    LOGGER.debug(f"Request successfully completed", extra=local_logging_context.store)
+    LOGGER.debug("Request successfully completed", extra=local_logging_context.store)
     return {"message": "success"}
 
 @app.put("/project/", response_model=Project)
@@ -112,16 +113,16 @@ def update_project(project: Project, user=Depends(get_current_user)):
     local_logging_context: LoggingContext = LoggingContext(source="update_project", project_id=project.id)
     LOGGER.debug(f"Request received with input as {project.dict()}", extra=local_logging_context.store)
     updated_project = update_project_db(project)
-    LOGGER.debug(f"Request successfully completed", extra=local_logging_context.store)
+    LOGGER.debug("Request successfully completed", extra=local_logging_context.store)
     return updated_project
 
 @app.get("/candidate/", response_model=CandidateResponse)
 def get_candidate(id: int, user=Depends(get_current_user)):
     local_logging_context: LoggingContext = LoggingContext(source="get_candidate", candidate_id=id)
-    LOGGER.info(f"Request received", extra=local_logging_context.store)
+    LOGGER.info("Request received", extra=local_logging_context.store)
     candidate_db = get_candidate_by_id(id)
     if not candidate_db:
-        LOGGER.warn(f"Invalid Request, Candidate with provided id does not exists", extra=local_logging_context.store)
+        LOGGER.warn("Invalid Request, Candidate with provided id does not exists", extra=local_logging_context.store)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid Request, Candidate with provided id does not exists",
@@ -132,7 +133,7 @@ def get_candidate(id: int, user=Depends(get_current_user)):
     special_score = fetch_special_score(payload)
 
     local_logging_context.upsert(special_score_payload=payload)
-    LOGGER.debug(f"Fetching special score", extra=local_logging_context.store)
+    LOGGER.debug("Fetching special score", extra=local_logging_context.store)
     local_logging_context.remove_keys(["special_score_payload"])
 
     skill_response = []
@@ -141,7 +142,7 @@ def get_candidate(id: int, user=Depends(get_current_user)):
         skill_response.append(skill_tmp)
 
     candidate_response = CandidateResponse(id=candidate_db.id, name=candidate_db.name, skills=skill_response)
-    LOGGER.debug(f"Request successfully completed ", extra=local_logging_context.store)
+    LOGGER.debug("Request successfully completed ", extra=local_logging_context.store)
     return candidate_response
 
 @app.post("/candidate/", response_model=Candidate)
@@ -156,12 +157,12 @@ def create_candidate(candidate: CandidateCreateRequest, user=Depends(get_current
 @app.delete("/candidate/")
 def delete_candidate(id: int, user=Depends(get_current_user)):
     local_logging_context: LoggingContext = LoggingContext(source="delete_candidate", candidate_id=id)
-    LOGGER.debug(f"Request received", extra=local_logging_context.store)
+    LOGGER.debug("Request received", extra=local_logging_context.store)
     delete_candidate_db(id)
 
     #deleting cached special scores
     redis_client.delete(SPECIAL_SCORE_REDIS_KEY.format(id))
-    LOGGER.debug(f"Request succesfully completed", extra=local_logging_context.store)
+    LOGGER.debug("Request succesfully completed", extra=local_logging_context.store)
     return {"message": "success"}
 
 @app.put("/candidate/", response_model=Candidate)
@@ -173,13 +174,13 @@ def update_candidate(candidate: Candidate, user=Depends(get_current_user)):
     #deleting cached special score
     redis_client.delete(SPECIAL_SCORE_REDIS_KEY.format(candidate.id))
     candidate_response = Candidate(id=updated_candidate.id, name=updated_candidate.name, skills=updated_candidate.skills)
-    LOGGER.debug(f"Request succesfully completed", extra=local_logging_context.store)
+    LOGGER.debug("Request succesfully completed", extra=local_logging_context.store)
     return candidate_response
 
 @app.post('/api/form-team', response_model=FormTeamResponse)
 def form_team(request_model: FormTeamRequest, user=Depends(get_current_user)):
     local_logging_context: LoggingContext = LoggingContext(source="form_team", request_model = request_model)
-    LOGGER.debug(f"Request received", extra=local_logging_context.store)
+    LOGGER.debug("Request received", extra=local_logging_context.store)
     project = get_project_by_id(request_model.project_id)
     if not project:
         LOGGER.warn(f"Invalid Request, Project with provided {request_model.project_id} does not exists", extra=local_logging_context.store)
@@ -200,14 +201,14 @@ def form_team(request_model: FormTeamRequest, user=Depends(get_current_user)):
         candidates.append(candidate)
 
     if request_model.team_size > len(candidates):
-        LOGGER.warn(f"Invalid Request, team_size cannot be greater than candidate list", extra=local_logging_context.store)
+        LOGGER.warn("Invalid Request, team_size cannot be greater than candidate list", extra=local_logging_context.store)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid Request, team_size cannot be greater than candidate list",
         )
     
     optimal_team = form_team_helper(request_model.team_size, candidates, project, local_logging_context)
-    LOGGER.debug(f"Request succesfully completed", extra=local_logging_context.store)
+    LOGGER.debug("Request succesfully completed", extra=local_logging_context.store)
     return optimal_team
 
 @app.get("/projects/", response_model=ProjectListResponse)
@@ -218,7 +219,7 @@ def get_projects(page_no: int, size: int, title: Optional[str] = None,
     user=Depends(get_current_user)
     ):
     local_logging_context: LoggingContext = LoggingContext(source="get_projects")
-    LOGGER.debug(f"Request received ", extra=local_logging_context.store)
+    LOGGER.debug("Request received ", extra=local_logging_context.store)
     # Validate pagination parameters
     if page_no < 1:
         raise HTTPException(
@@ -256,7 +257,7 @@ def get_candidates(page_no: int, size: int, name: Optional[str] = None,
     user=Depends(get_current_user) 
     ):
     local_logging_context: LoggingContext = LoggingContext(source="get_candidates")
-    LOGGER.debug(f"Request received ", extra=local_logging_context.store)
+    LOGGER.debug("Request received ", extra=local_logging_context.store)
 
     # Validate pagination parameters
     if page_no < 1:

@@ -18,6 +18,11 @@ class Candidate(BaseModel):
     name: str
     skills: List[Skill]
 
+class CandidateDictSkills(BaseModel):
+    id: int
+    name: str
+    skills: dict
+
 class ProjectCreateRequest(BaseModel):
     title: str
     skills: List[Skill]

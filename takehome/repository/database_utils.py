@@ -74,7 +74,7 @@ def create_project_db(project: ProjectCreateRequest, local_logging_context: Logg
         db.refresh(new_project)
 
         local_logging_context.upsert(project_id=new_project.id)
-        LOGGER.debug(f"Created New project", extra=local_logging_context.store)
+        LOGGER.debug("Created New project", extra=local_logging_context.store)
         return Project(
             id=new_project.id,
             title=new_project.title,
@@ -219,7 +219,7 @@ def create_candidate_db(candidate: CandidateCreateRequest, local_logging_context
         db.commit()
         db.refresh(new_candidate)
         local_logging_context.upsert(candidate_id=new_candidate.id)
-        LOGGER.debug(f"New Candidate created", extra=local_logging_context.store)
+        LOGGER.debug("New Candidate created", extra=local_logging_context.store)
 
         for skill in candidate.skills:
             new_skill = CandidateSkillDB(
